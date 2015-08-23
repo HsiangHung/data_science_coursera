@@ -20,6 +20,7 @@ rankall <- function(outcome,num='best'){
       hospital <- c( )
       state_name <- c( )
       for (state in 1 : numb_state){
+      #for (state in 1 : 10){
                   
             hospital_name <- name[[state]]
             name3 <- name2[[state]]
@@ -27,27 +28,32 @@ rankall <- function(outcome,num='best'){
             
             #print(name3[1])
             
-            sample_numb <- length(hospital_name)
-            k <- as.numeric(unlist(Y[state]))
+            sample_numb <- length(hospital_name)    
+            k <- as.numeric(unlist(Y[state]))       # to convert the characters from table to numbers
             #print(k)
 
-            rank <- order(k,na.last =TRUE)
-            raterank <- k[rank[1:sample_numb]]
+            rank <- order(k,na.last =TRUE)          # this gives position of k with rate in ascending order.
+            raterank <- k[rank[1:sample_numb]]      # this rearrange a vector of k with rates in ascending order.
             b <- is.na(k)
-            last_rank <- length(b[b==FALSE])
-            namerank <- hospital_name[rank[1:sample_numb]]
+            last_rank <- length(b[b==FALSE])        # this gives the number of non-NA elements of rearranged vector.
+            namerank <- hospital_name[rank[1:sample_numb]]  # this gives a vector of hospital names with rate...
             #print(data.frame(Hospital.Name=namerank,Rate=raterank,Rank=1:sample_numb))
             #print(last_rank)
+            
+            # the following logical is to determine, best, last, or certain rank
             if (num =='best'){
                   rankth =1
             } else if (num == 'worst') {
                   rankth =last_rank
+            } else {
+                  rankth = num               
             }
             #print(rankth)
             #print(data.frame(Hospital.Name=namerank[1:rankth],Rate=raterank[1:rankth],Rank=1:rankth))
             hospital[state] <- namerank[rankth]
+            #write(hospital[state],state_name[state])
       }
-      result <- data.frame(state=state_name,hospital=hospital)
+      result <- data.frame(state=state_name,hospital=hospital)#,check.rows = FALSE)
       return(result)
 }
 
