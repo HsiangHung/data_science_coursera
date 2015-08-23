@@ -20,14 +20,12 @@ rankall <- function(outcome,num='best'){
       hospital <- c( )
       state_name <- c( )
       for (state in 1 : numb_state){
-      #for (state in 1 : 10){
                   
             hospital_name <- name[[state]]
             name3 <- name2[[state]]
             state_name[state] <- name3[1]
             
             #print(name3[1])
-            
             sample_numb <- length(hospital_name)    
             k <- as.numeric(unlist(Y[state]))       # to convert the characters from table to numbers
             #print(k)
@@ -49,9 +47,22 @@ rankall <- function(outcome,num='best'){
                   rankth = num               
             }
             #print(rankth)
+            
+            sameraterearrange <- function(namerank,raterank){
+                  ## this function is used to rearrange the vector with rate and alphabetically.
+                  name  <- split(namerank,raterank)
+                  numb_rate <- length(as.character(name))
+                  #print(numb_rate)
+                  #print(sapply(name,sort))
+                  name2 <- sapply(name,sort)
+                  return(unsplit(name2,raterank))
+            }
             #print(data.frame(Hospital.Name=namerank[1:rankth],Rate=raterank[1:rankth],Rank=1:rankth))
+            namerank <- sameraterearrange(namerank,raterank)
+            
+            #print(data.frame(Hospital.Name=namerank[1:rankth],Rate=raterank[1:rankth],Rank=1:rankth))
+            
             hospital[state] <- namerank[rankth]
-            #write(hospital[state],state_name[state])
       }
       result <- data.frame(state=state_name,hospital=hospital)#,check.rows = FALSE)
       return(result)
