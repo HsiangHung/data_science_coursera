@@ -68,12 +68,16 @@ img {
 </div>
 
 
-
 <p>The goal of this project is to build the model to predict the exercise type. The datasets are given by sensor measurements installed on the belt, forearm, arm, and dumbell of 6 participants, and can be classified to 5 different categories of exercise, labeled as “classe=A, B, C, D and E”. In the following, I will use the “Random Forest” algorithm to train the data, constuct the model and further use it to predict the outcome for the test sets. During the traning, I implemented “K-fold cross-validation” to examine the accuracy of our model. I will show that given the simulation, the fitted model is reliable to predict a new test set.</p>
 <p>First, one can load the training datasets and testing datasets, and store as “data_training” and “data_testing”</p>
 <pre class="r"><code>data_training &lt;- read.csv(&quot;pml-training.csv&quot;)
-data_testing  &lt;- read.csv(&quot;pml-testing.csv&quot;)</code></pre>
-<p>Next one can observe what features in the training sets may be important variable to determine the exercise type. Comparing the test and training sets, I found there are 52 possible features which may play roles to relate the exercise categories. The corresponding column names are “gyros_A_<span class="math">\(\alpha\)</span>”, “accel_A_<span class="math">\(\alpha\)</span>”, “magnet_A_<span class="math">\(\alpha\)</span>”, and, “roll_A”, “pitch_A”, “yaw_A” and “total_accel_A”, where “A” are “forearm”, “dumbbell”, “arm”, “belt”, and “<span class="math">\(\alpha=x,y,z\)</span>”. Load the caret and randomForest packages in R</p>
+data_testing  &lt;- read.csv(&quot;pml-testing.csv&quot;)
+dim(data_training)</code></pre>
+<pre><code>## [1] 19622   160</code></pre>
+<pre class="r"><code>dim(data_testing)</code></pre>
+<pre><code>## [1]  20 160</code></pre>
+<p>It seems there are 160 features in the training and test sets. But by typeing “names(data_training)” and “names(data_testing)”, we can infer there are useful 159 features in the datasets. The last variable in the training set is “classe” as the <span class="math">\(y\)</span> outcome. The last variable in the testing set is “id” which lables problem index.</p>
+<p>Next one can observe what features in the training sets may be important variable to determine the exercise type. Comparing the test and training sets, I found there are 52 possible features which may play roles to relate the exercise categories. The corresponding variable names are “gyros_A_<span class="math">\(\alpha\)</span>”, “accel_A_<span class="math">\(\alpha\)</span>”, “magnet_A_<span class="math">\(\alpha\)</span>”, and, “roll_A”, “pitch_A”, “yaw_A” and “total_accel_A”, where “A” are “forearm”, “dumbbell”, “arm”, “belt”, and “<span class="math">\(\alpha=x,y,z\)</span>”. Load the “caret”&quot; and “randomForest”&quot; packages in R</p>
 <pre class="r"><code>library(ggplot2)
 library(lattice)
 library(caret)
@@ -87,7 +91,7 @@ belt_var &lt;- c(&quot;gyros_belt_x&quot;,&quot;gyros_belt_y&quot;,&quot;gyros_b
 variable &lt;- c(belt_var,arm_var,dumbbell_var,forearm_var)
 datavar        &lt;- data_training[variable]
 datavar$classe &lt;- data_training$classe</code></pre>
-<p>Although the training set has 160 features, other variables show either “NA” or nothing; therefore one can ignore them in building models. We can withdraw the 52 features, and add the “classe” (as y) to generate a data frame called “datavar”, rather than directly training “data_training” which has 160 features. Now the reorganized dataset “datavar” has 53 columns (52 features + y):</p>
+<p>Although the training set has 159 features, other variables show either “NA” or nothing; therefore one can ignore them in building models. We can withdraw the 52 features, and add the “classe” (as y) to generate a data frame called “datavar”, rather than directly training “data_training” which has 159 features. Now the reorganized dataset “datavar” has 53 columns (52 features + <span class="math">\(y\)</span>):</p>
 <pre class="r"><code>dim(datavar)[2]</code></pre>
 <pre><code>## [1] 53</code></pre>
 <pre class="r"><code>n_sample &lt;- dim(datavar)[1]
@@ -95,12 +99,17 @@ n_sample</code></pre>
 <pre><code>## [1] 19622</code></pre>
 <p>The number of examples (samples) are 19,622. But we can split the data into k pieces to implement “K-fold cross-validation”. In this algorithm, one of the pieces is regarded as cross-validation sets, and the remianing K-1 ones is used for training sets, in order to examine the sample error. Below I set “k_fold=5” and evenly parition the “datavar” into 5 pieces by randomly assigning a index array:</p>
 <pre class="r"><code>k_fold =5
-datavar$id &lt;- sample(1:k_fold,n_sample,replace=TRUE)</code></pre>
+datavar$id &lt;- sample(1:k_fold,n_sample,replace=TRUE)
+table(datavar$id)</code></pre>
+<pre><code>## 
+##    1    2    3    4    5 
+## 3882 4072 3836 3902 3930</code></pre>
 <p>Then the “datavar” has an additional (artifical) column named “id”. So each sample has a lable “id=1,2…5”, assigned randomly. For example, we can see the “id” in the first 20 rows of the “datavar” set:</p>
 <pre class="r"><code>head(datavar$id,20)</code></pre>
-<pre><code>##  [1] 4 1 1 3 2 2 5 2 2 3 5 2 5 4 1 1 3 5 1 4</code></pre>
-<p>Next step we perform a loop, where in each iteration one piece (k-th piece) is set as cross-validation, named as “crossval” and the others are combined as the training set named “training”. Thus each piece will be a cross-valiation set once, but be training set k-1 times. Note that to be more convenient in training, we remove the “id” column since it is an artifical feature we added and is irrelevant to the outcome.</p>
-<p>I used the “Random Forest” algorithm to train the training set. “modFit” is the resulting model and “pred” gives the predicted y.</p>
+<pre><code>##  [1] 4 1 4 5 3 1 2 4 4 5 2 4 3 1 4 4 4 1 2 4</code></pre>
+<p>Then we can easily split the “datavar” into 5 pieces by “id” category.</p>
+<p>Next step we perform a loop to run “K-fold cross-validation”. In each iteration one piece (k-th piece) is set as cross-validation, named as “crossval” and the others are combined as the training set named “training”. Thus each piece will be a cross-valiation set once, but be training set k-1 times. Note that to be more convenient in training, we remove the “id” column since it is an artifical feature we added and is irrelevant to the outcome.</p>
+<p>I used the “Random Forest” algorithm to train the training set, since I found the “rpart” algorithm works poorly in my case. “modFit” is the resulting model and “pred” gives the predicted y.</p>
 <pre class="r"><code>acyRate = rep(0,k_fold)
 for (k in 1:k_fold) {
       training &lt;- subset(datavar, datavar$id != k)
@@ -116,12 +125,12 @@ for (k in 1:k_fold) {
       acyRate[k] &lt;- predRate
 }
 acyRate</code></pre>
-<pre><code>## [1] 0.9974483 0.9935434 0.9954326 0.9949635 0.9974483</code></pre>
+<pre><code>## [1] 0.9951056 0.9980354 0.9927007 0.9933368 0.9949109</code></pre>
 <pre class="r"><code>mean(acyRate); sd(acyRate)</code></pre>
-<pre><code>## [1] 0.9957672</code></pre>
-<pre><code>## [1] 0.001684905</code></pre>
-<p>The array “checkVector” is used to compare the predicted outcome <span class="math">\(\hat{y}\)</span> and the variable “claase”, y. If the prediction is correct, <span class="math">\(\hat{y}[i]=y[i]\)</span>, then the corresponding element of check array (<span class="math">\(checkVector[i]\)</span>) will show “TRUE”; otherwise “FALSE”. Then we can qualtitively examine the accruacy of our model.</p>
-<p>The number “predRate” gives the ratio, how much outcome the model predicted correctly. Higher predRate means better prediction. In our concrete example, k_fold=5, I found the average ratio is about 0.99.. with small errors (&lt; <span class="math">\(1 \%\)</span>), meaning that: every 100 samples, we may only make one wrong prediction.</p>
+<pre><code>## [1] 0.9948179</code></pre>
+<pre><code>## [1] 0.002068799</code></pre>
+<p>The array “checkVector” is used to compare the predicted outcome <span class="math">\(\hat{y}\)</span> and the variable “claase” <span class="math">\(y\)</span>. If the prediction is correct, <span class="math">\(\hat{y}[i]=y[i]\)</span>, then the corresponding element of check array (checkVector<span class="math">\([i]\)</span>) will show “TRUE”; otherwise “FALSE”. Then we count the number of “TRUE” to qualtitively examine the accruacy of our model.</p>
+<p>The number “predRate” gives the ratio, how much percentage the model predicted correctly. Higher predRates mean better predictions. In our concrete example, k_fold=5, I found the average ratio is about 0.995.. with small errors (&lt; <span class="math">\(1 \%\)</span>). This explicitly means that, in average, every 100 samples, we may only make one wrong prediction or even less.</p>
 <p>The model summary is</p>
 <pre class="r"><code>modFit</code></pre>
 <pre><code>## 
@@ -131,18 +140,18 @@ acyRate</code></pre>
 ##                      Number of trees: 100
 ## No. of variables tried at each split: 7
 ## 
-##         OOB estimate of  error rate: 0.5%
+##         OOB estimate of  error rate: 0.54%
 ## Confusion matrix:
 ##      A    B    C    D    E  class.error
-## A 4462    3    0    0    0 0.0006718925
-## B   15 3061    7    0    0 0.0071359066
-## C    0   12 2695    4    0 0.0059018812
-## D    0    0   27 2537    2 0.0113016368
-## E    0    0    0    8 2870 0.0027797081</code></pre>
+## A 4475    1    0    0    1 0.0004467277
+## B   18 3001   10    0    0 0.0092439749
+## C    0   12 2708    5    0 0.0062385321
+## D    0    0   28 2554    1 0.0112272551
+## E    0    0    3    5 2870 0.0027797081</code></pre>
 <p>Here I selected number of tree “ntree=100”. I also tried “ntree=200” and the outcome shows similar accuracy. So “ntree=100” is sufficient to give a good prediction. This shows the fitting model is accurate.</p>
 <p>In the last, for each different selection of cross-validation, the accuracy ratios are separately</p>
 <pre class="r"><code>acyRate</code></pre>
-<pre><code>## [1] 0.9974483 0.9935434 0.9954326 0.9949635 0.9974483</code></pre>
+<pre><code>## [1] 0.9951056 0.9980354 0.9927007 0.9933368 0.9949109</code></pre>
 <p>This shows the simulation is stable. Therefore, when I test the test set, I will just choose one of the fitted model, no need to find the model paramters in average.</p>
 
 

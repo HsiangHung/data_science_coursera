@@ -4,7 +4,7 @@ author: "HHH"
 date: "October 24, 2015"
 output: html_document
 ---
-\section{Motivation}
+
 
 The goal of this project is to build the model to predict the exercise type. The datasets are given by sensor measurements installed on the belt, forearm, arm, and dumbell of 6 participants, and can be classified to 5 different categories of exercise, labeled as "classe=A, B, C, D and E". In the following, I will use the "Random Forest" algorithm to train the data, constuct the model and further use it to predict the outcome for the test sets. During the traning, I implemented "K-fold cross-validation" to examine the accuracy of our model. I will show that given the simulation, the fitted model is reliable to predict a new test set.
 
@@ -14,10 +14,13 @@ First, one can load the training datasets and testing datasets, and store as "da
 ```{r}
 data_training <- read.csv("pml-training.csv")
 data_testing  <- read.csv("pml-testing.csv")
+dim(data_training)
+dim(data_testing)
 ```
+It seems there are 160 features in the training and test sets. But by typeing "names(data_training)" and "names(data_testing)", we can infer there are useful 159 features in the datasets. The last variable in the training set is "classe" as the $y$ outcome. The last variable in the testing set is "id" which lables problem index.
 
 
-Next one can observe what features in the training sets may be important variable to determine the exercise type. Comparing the test and training sets, I found there are 52 possible features which may play roles to relate the exercise categories. The corresponding column names are "gyros_A_$\alpha$", "accel_A_$\alpha$", "magnet_A_$\alpha$", and, "roll_A", "pitch_A", "yaw_A" and "total_accel_A", where "A" are "forearm", "dumbbell", "arm", "belt", and  "$\alpha=x,y,z$". Load the caret and randomForest packages in R
+Next one can observe what features in the training sets may be important variable to determine the exercise type. Comparing the test and training sets, I found there are 52 possible features which may play roles to relate the exercise categories. The corresponding variable names are "gyros_A_$\alpha$", "accel_A_$\alpha$", "magnet_A_$\alpha$", and, "roll_A", "pitch_A", "yaw_A" and "total_accel_A", where "A" are "forearm", "dumbbell", "arm", "belt", and  "$\alpha=x,y,z$". Load the "caret"" and "randomForest"" packages in R
 ```{r}
 library(ggplot2)
 library(lattice)
@@ -31,7 +34,7 @@ variable <- c(belt_var,arm_var,dumbbell_var,forearm_var)
 datavar        <- data_training[variable]
 datavar$classe <- data_training$classe
 ```
-Although the training set has 160 features, other variables show either "NA" or nothing; therefore one can ignore them in building models. We can withdraw the 52 features, and add the "classe" (as y) to generate a data frame called "datavar", rather than directly training "data_training" which has 160 features. Now the reorganized dataset "datavar" has 53 columns (52 features + y):
+Although the training set has 159 features, other variables show either "NA" or nothing; therefore one can ignore them in building models. We can withdraw the 52 features, and add the "classe" (as y) to generate a data frame called "datavar", rather than directly training "data_training" which has 159 features. Now the reorganized dataset "datavar" has 53 columns (52 features + $y$):
 ```{r}
 dim(datavar)[2]
 n_sample <- dim(datavar)[1]
@@ -43,16 +46,17 @@ Below I set "k_fold=5" and evenly parition the "datavar" into 5 pieces by random
 ```{r}
 k_fold =5
 datavar$id <- sample(1:k_fold,n_sample,replace=TRUE)
+table(datavar$id)
 ```
 Then the "datavar" has an additional (artifical) column named "id". So each sample has a lable "id=1,2...5", assigned randomly. For example, we can see the "id" in the first 20 rows of the "datavar" set:
 ```{r}
 head(datavar$id,20)
 ```
+Then we can easily split the "datavar" into 5 pieces by "id" category.
 
+Next step we perform a loop to run "K-fold cross-validation". In each iteration one piece (k-th piece) is set as cross-validation, named as "crossval" and the others are combined as the training set named "training". Thus each piece will be a cross-valiation set once, but be training set k-1 times. Note that to be more convenient in training, we remove the "id" column since it is an artifical feature we added and is irrelevant to the outcome. 
 
-Next step we perform a loop, where in each iteration one piece (k-th piece) is set as cross-validation, named as "crossval" and the others are combined as the training set named "training". Thus each piece will be a cross-valiation set once, but be training set k-1 times. Note that to be more convenient in training, we remove the "id" column since it is an artifical feature we added and is irrelevant to the outcome. 
-
-I used the "Random Forest" algorithm to train the training set. "modFit" is the resulting model and "pred" gives the predicted y. 
+I used the "Random Forest" algorithm to train the training set, since I found the "rpart" algorithm works poorly in my case. "modFit" is the resulting model and "pred" gives the predicted y. 
 ```{r}
 acyRate = rep(0,k_fold)
 for (k in 1:k_fold) {
@@ -71,11 +75,11 @@ for (k in 1:k_fold) {
 acyRate
 mean(acyRate); sd(acyRate)
 ```
-The array "checkVector" is used to compare the predicted outcome $\hat{y}$ and the variable "claase", y.
-If the prediction is correct, $\hat{y}[i]=y[i]$, then the corresponding element of check array ($checkVector[i]$) will show "TRUE"; otherwise "FALSE". Then we can qualtitively examine the accruacy of our model.
+The array "checkVector" is used to compare the predicted outcome $\hat{y}$ and the variable "claase" $y$.
+If the prediction is correct, $\hat{y}[i]=y[i]$, then the corresponding element of check array (checkVector$[i]$) will show "TRUE"; otherwise "FALSE". Then we count the number of "TRUE" to qualtitively examine the accruacy of our model.
 
-The number "predRate" gives the ratio, how much outcome the model predicted correctly.
-Higher predRate means better prediction. In our concrete example, k_fold=5, I found the average ratio is about 0.99.. with small errors (< $1 \%$), meaning that: every 100 samples, we may only make one wrong prediction.
+The number "predRate" gives the ratio, how much percentage the model predicted correctly.
+Higher predRates mean better predictions. In our concrete example, k_fold=5, I found the average ratio is about 0.995.. with small errors (< $1 \%$). This explicitly means that, in average, every 100 samples, we may only make one wrong prediction or even less.
 
 The model summary is
 ```{r}
